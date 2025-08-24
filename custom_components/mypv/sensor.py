@@ -150,6 +150,8 @@ class MypvDevice(CoordinatorEntity, SensorEntity):
         """State class."""
         if self.type == "power":
             return SensorStateClass.MEASUREMENT
+        if self.type == "temp1":
+            return SensorStateClass.MEASUREMENT
         return None
 
     @property
@@ -157,6 +159,8 @@ class MypvDevice(CoordinatorEntity, SensorEntity):
         """State class."""
         if self.type == "power":
             return SensorDeviceClass.POWER
+        if self.type == "temp1":
+            return SensorDeviceClass.TEMPERATURE
         return None
 
     @property
