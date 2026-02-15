@@ -1,8 +1,8 @@
 {
   "domain": "mypv",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "name": "MyPV AC-THOR and ELWA",
-  "documentation": "https://github.com/zaubererty/homeassistant-mvpv",
+  "documentation": "https://github.com/coccyx00/homeassistant-mvpv",
   "config_flow": true,
   "dependencies": [],
   "codeowners": ["@coccyx00", "@zaubererty", "@techolutions"],

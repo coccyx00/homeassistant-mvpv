@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
-    """Add an MYPV entry."""
+    """Add a MYPV entry."""
     coordinator: MYPVDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
         DATA_COORDINATOR
     ]
@@ -68,6 +68,7 @@ class MypvDevice(CoordinatorEntity, SensorEntity):
         if sensor_type not in SENSOR_TYPES:
             raise KeyError
         self.coordinator = coordinator
+
         self._sensor = SENSOR_TYPES[sensor_type].name_long
         self._name = name
         self.type = sensor_type

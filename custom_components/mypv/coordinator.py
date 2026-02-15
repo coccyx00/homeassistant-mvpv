@@ -23,6 +23,7 @@ class MYPVDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, *, config: dict, options: dict) -> None:
         """Initialize global NZBGet data updater."""
         self._host = config[CONF_HOST]
+        self.host = config[CONF_HOST]
         self._info = None
         self._setup = None
         self._firmware = None
@@ -80,7 +81,7 @@ class MYPVDataUpdateCoordinator(DataUpdateCoordinator):
             response = requests.get(f"http://{self._host}/{page}.jsn", timeout=10)
             data = json.loads(response.text)
             _LOGGER.debug(data)
-        except Exception as error:
+        except (requests.RequestException, json.JSONDecodeError) as error:
             _LOGGER.error("Failed to update JSON data: %s", error)
             return None
         else:
@@ -96,8 +97,11 @@ class MYPVDataUpdateCoordinator(DataUpdateCoordinator):
             )
             info = json.loads(response.text)
             _LOGGER.debug(info)
-        except Exception:
-            _LOGGER.error("Mypv update firmware failed. postpone")
+        except requests.RequestException:
+            _LOGGER.error("Failed to load firmware info")
+            return json.loads("{}")
+        except json.JSONDecodeError:
+            _LOGGER.error("Failed to decode JSON")
             return json.loads("{}")
         else:
             return info

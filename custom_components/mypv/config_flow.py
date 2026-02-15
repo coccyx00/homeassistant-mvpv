@@ -7,15 +7,18 @@ from requests.exceptions import ConnectTimeout, HTTPError
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_HOST, CONF_MONITORED_CONDITIONS
+from homeassistant.const import CONF_DEVICE, CONF_HOST, CONF_MONITORED_CONDITIONS
 from homeassistant.core import HomeAssistant, callback
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.selector import TextSelector, TextSelectorConfig
 
-from .const import DOMAIN, SENSOR_TYPES  # pylint:disable=unused-import
+from .const import DOMAIN, MYPV_DEVICES, SENSOR_TYPES  # pylint:disable=unused-import
 
 SUPPORTED_SENSOR_TYPES = list(SENSOR_TYPES)
 
-DEFAULT_MONITORED_CONDITIONS = ["device", "power", "temp1", "fwversion", "tempchip"]
+DEFAULT_HOST = "192.168.178.0"
+DEFAULT_DEVICE = "Unknown"
+DEFAULT_MONITORED_CONDITIONS = ["device"]
 
 
 @callback
@@ -62,14 +65,23 @@ class MypvConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if self._host_in_configuration_exists(user_input[CONF_HOST]):
                 self._errors[CONF_HOST] = "host_exists"
             else:
+                device = user_input[CONF_DEVICE]
                 host = user_input[CONF_HOST]
                 conditions = user_input[CONF_MONITORED_CONDITIONS]
                 can_connect = await self.hass.async_add_executor_job(
                     self._check_host, host
                 )
-                if can_connect:
+                if can_connect and device == DEFAULT_DEVICE:
+                    user_input[CONF_DEVICE] = self._info["device"]
+                    # getting the known sensors for this device
+                    device_short = MYPV_DEVICES[user_input[CONF_DEVICE]]
+                    user_input[CONF_MONITORED_CONDITIONS] = []
+                    for k, e in SENSOR_TYPES.items():
+                        if device_short in e.device.split(" "):
+                            user_input[CONF_MONITORED_CONDITIONS].append(k)
+                if can_connect and device != DEFAULT_DEVICE:
                     return self.async_create_entry(
-                        title=f"{self._info['device']} - {self._info['number']}",
+                        title=f"{self._info['device']} {self._info['number']}",
                         data={
                             CONF_HOST: host,
                             CONF_MONITORED_CONDITIONS: conditions,
@@ -77,17 +89,19 @@ class MypvConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
         else:
             user_input = {}
-            user_input[CONF_HOST] = "192.168.0.0"
+            user_input[CONF_HOST] = DEFAULT_HOST
+            user_input[CONF_DEVICE] = DEFAULT_DEVICE
             user_input[CONF_MONITORED_CONDITIONS] = DEFAULT_MONITORED_CONDITIONS
 
-        default_monitored_conditions = (
-            [] if self._async_current_entries() else DEFAULT_MONITORED_CONDITIONS
-        )
         setup_schema = vol.Schema(
             {
                 vol.Required(CONF_HOST, default=user_input[CONF_HOST]): str,
                 vol.Required(
-                    CONF_MONITORED_CONDITIONS, default=default_monitored_conditions
+                    CONF_DEVICE, default=user_input[CONF_DEVICE]
+                ): TextSelector(TextSelectorConfig(read_only=True)),
+                vol.Required(
+                    CONF_MONITORED_CONDITIONS,
+                    default=user_input[CONF_MONITORED_CONDITIONS],
                 ): cv.multi_select(SUPPORTED_SENSOR_TYPES),
             }
         )
@@ -114,7 +128,7 @@ class MypvOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
+        # self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
